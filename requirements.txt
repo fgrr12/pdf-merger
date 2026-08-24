@@ -1,0 +1,7 @@
+tkinterdnd2
+customtkinter
+PyPDF2
+
+# Solo para la vista previa (importadas lazy)
+PyMuPDF
+Pillow
