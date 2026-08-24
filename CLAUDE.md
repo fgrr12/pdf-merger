@@ -2,7 +2,8 @@
 
 ## Qué es esto
 
-**Grapa** — app de escritorio (Tauri 2) para unir PDFs. Tauri v2 + React 19 + TS +
+**Grapa** — app de escritorio (Tauri 2) para armar un PDF a partir de otros PDFs e
+imágenes: unir, reordenar por archivo o por página, girar, extraer y exportar. Tauri v2 + React 19 + TS +
 Tailwind 4, `pnpm`. UI en español. La versión vieja en Python/tkinter está en
 `legacy/` y ya no se mantiene.
 
@@ -13,7 +14,7 @@ pnpm install
 pnpm t:d              # tauri dev (levanta Vite en el puerto fijo 1420)
 pnpm t:b              # tauri build → src-tauri/target/release/bundle/
 pnpm build            # typecheck (tsc) + vite build, solo frontend
-pnpm check            # chequeo del merge (node corre el .ts directo, sin framework)
+pnpm check            # chequeo del armado (node corre el .ts directo, sin framework)
 pnpm icons            # regenera src-tauri/icons/ desde src/lib/logo.ts
 ```
 
@@ -21,37 +22,74 @@ No hay linter. Las dos verificaciones automáticas son `pnpm build` (tsc estrict
 `noUnusedLocals`/`noUnusedParameters`) y `pnpm check`; si tocaste Rust, `cargo check`
 desde `src-tauri/`.
 
-`scripts/check-merge.mjs` arma PDFs de páginas cuadradas de distinto tamaño y verifica
-que salgan en orden y completas. Por eso `src/lib/merge.ts` no importa nada de Tauri ni
-de Vite: es lo único que node puede ejecutar tal cual. Si le agregás una dependencia de
-esas, el chequeo deja de correr.
+`scripts/check-build.mjs` arma PDFs de páginas cuadradas de distinto tamaño (y una
+imagen) para verificar orden, subconjuntos, giro, imágenes, numeración y marcadores.
 
 ## Arquitectura
 
 ### Rust no hace nada
 
 `src-tauri/src/lib.rs` solo registra los plugins `dialog`, `fs` y `opener`. **Toda** la
-lógica de PDF vive en el frontend: `pdf-lib` une y `pdf.js` (`pdfjs-dist`) dibuja las
-miniaturas. Antes de agregar un comando de Tauri, fijate si no se resuelve en JS — la
-decisión acá fue no tener capa de IPC ni dependencias de PDF en Rust.
+lógica de PDF vive en el frontend: `pdf-lib` arma el documento y `pdf.js` (`pdfjs-dist`)
+dibuja las miniaturas. Antes de agregar un comando de Tauri, fijate si no se resuelve en
+JS — la decisión acá fue no tener capa de IPC ni dependencias de PDF en Rust.
 
-`src/lib/merge.ts` (el núcleo, sin dependencias del entorno) recibe un iterable
-asíncrono en vez de un array: así `pdf.ts` va leyendo de a un archivo y nunca están
-todos los buffers en memoria a la vez.
+### La lista de páginas es la verdad
+
+El estado son **páginas**, no archivos (`src/types.ts`). Cada `Page` apunta a un `Source`
+(el archivo), un índice dentro de él y un giro. La vista de archivos se **deriva**:
+`toBlocks()` agrupa páginas consecutivas del mismo archivo, así que mientras nadie
+intercale nada hay exactamente un bloque por archivo y se ve igual que antes. Si el
+usuario mezcla páginas en la vista de páginas, un archivo aparece como varios bloques —
+es incómodo pero es la verdad, no lo "arregles" reagrupando por archivo.
+
+Un archivo recién agregado existe como `Source` antes de tener páginas (todavía no se
+sabe cuántas son). Por eso `FileView` recibe aparte los `pending`: si no, la tarjeta no
+aparecería hasta terminar de leer el archivo.
+
+### El armado del PDF es un módulo puro
+
+`src/lib/build.ts` no importa nada de Tauri ni de Vite: recibe un `read(path)` inyectado.
+Es lo que permite que `pnpm check` lo corra tal cual con node y verifique orden,
+subconjuntos, giro, imágenes, numeración y marcadores contra PDFs de verdad. Si le
+agregás una dependencia del entorno, el chequeo deja de correr.
+
+Dos cosas ahí que parecen rebuscadas y no lo son:
+
+- Copia **por corridas** (`runs`), no página por página. Un `copyPages` por página hace
+  que pdf-lib duplique fuentes e imágenes embebidas una vez por página y el archivo de
+  salida se infla varias veces.
+- La numeración se dibuja en coordenadas sin rotar. En una página girada hay que llevar
+  el número al borde que quedó abajo *y* girar el texto, o sale de costado en el lugar
+  equivocado. De ahí el switch por ángulo.
+
+El giro del usuario se **suma** al que la página ya traía en el original; no lo reemplaza.
 
 ### Los bytes no se guardan en el estado
 
-`Doc` (`src/types.ts`) guarda la **ruta**, no el contenido. Cada archivo se lee dos
-veces: una en `inspect()` para contar páginas y sacar la miniatura, otra en `merge()`.
-Es a propósito — con 40 PDFs en la lista, tener todos los buffers en memoria no vale la
-pena para una operación que se hace una vez.
+`Source` guarda la **ruta**, no el contenido. Las miniaturas se dibujan bajo demanda con
+un `IntersectionObserver` (`useThumb`) porque un documento de 300 páginas son 300
+renders, y se dibujan de a una: 30 renders en paralelo trababan la ventana.
+
+`src/lib/pdf.ts` mantiene abierto un documento de pdf.js **por archivo**. Abrirlo es lo
+caro; tenerlo vivo hace que recorrer las páginas sea instantáneo. Se cierra en
+`closeSource()` cuando el archivo sale de la lista — el efecto que lo dispara está en
+`useDocument`.
 
 `pdf.js` **transfiere** el buffer que recibe en `getDocument({data})` y lo deja
-inutilizable, por eso `inspect()` siempre le pasa una copia (`new Uint8Array(bytes)`).
+inutilizable, por eso siempre se le pasa una copia (`new Uint8Array(bytes)`).
 
-`inspect()` corre de a un archivo por vez (`useDocuments.add`): cada uno levanta un
-worker de pdf.js. La UI no espera — las tarjetas aparecen en estado `loading` y se van
-completando.
+### Deshacer
+
+`useDocument` es un reducer envuelto en `{ present, past }`. Solo son deshacibles las
+acciones del usuario (`UNDOABLE`): los metadatos que van llegando de forma asíncrona
+(`resolveSource`) no deben generar pasos de historial o Cmd+Z no haría nada visible.
+
+### Deduplicación
+
+`useDocument` mantiene un `Set` de rutas en un ref (`known`) como espejo síncrono del
+estado. Es lo que evita duplicados cuando llegan dos "agregar" en el mismo tick, sin
+leer estado dentro de un updater de React (que StrictMode invoca dos veces).
 
 ### La marca vive en un solo lugar
 
@@ -66,18 +104,14 @@ fueron pareciendo cada vez menos: si retocás el dibujo, tocá ese archivo y cor
 - **Archivos desde el sistema**: los entrega el runtime de Tauri vía
   `getCurrentWebview().onDragDropEvent` en `App.tsx`. El DOM nunca ve esos eventos, así
   que no busques `onDrop` para esto.
-- **Reordenar tarjetas**: HTML5 drag & drop normal, dentro de `DocGrid.tsx`.
+- **Reordenar tarjetas**: HTML5 drag & drop normal, dentro de `FileView` y `PageView`.
+  En la vista de archivos se mueve el bloque entero; en la de páginas, la página sola (o
+  toda la selección, si la que arrastrás es parte de ella).
 
-El orden de la grilla **es** el orden del merge. Las flechas ◀ ▶ de cada tarjeta hacen
-lo mismo que arrastrar: existen porque el drag del webview puede fallar según la
-plataforma y porque son accesibles con teclado. Si tocás una de las dos vías, mantené
-la otra en pie.
-
-### Deduplicación
-
-`useDocuments` mantiene un `Set` de rutas en un ref (`known`) como espejo síncrono del
-estado. Es lo que evita duplicados cuando llegan dos "agregar" en el mismo tick, sin
-leer estado dentro de un updater de React (que StrictMode invoca dos veces).
+El orden de la grilla **es** el orden de salida. Las flechas ◀ ▶ de las tarjetas de
+archivo hacen lo mismo que arrastrar: existen porque el drag del webview puede fallar
+según la plataforma y porque son accesibles con teclado. Si tocás una de las dos vías,
+mantené la otra en pie.
 
 ### Permisos y scope de `fs` (donde se pierde más tiempo)
 
