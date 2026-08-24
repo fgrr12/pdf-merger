@@ -1,5 +1,5 @@
 import { basename } from "../lib/files";
-import { Folder } from "./Icons";
+import { Check, Folder } from "./Icons";
 import { Button } from "./ui";
 
 type Props = {
@@ -7,11 +7,15 @@ type Props = {
   onName: (value: string) => void;
   folder: string;
   onPickFolder: () => void;
+  bookmarks: boolean;
+  onBookmarks: (value: boolean) => void;
+  pageNumbers: boolean;
+  onPageNumbers: (value: boolean) => void;
   merging: boolean;
   progress: number;
   disabled: boolean;
-  count: number;
-  onMerge: () => void;
+  label: string;
+  onRun: () => void;
 };
 
 export function OutputBar({
@@ -19,20 +23,29 @@ export function OutputBar({
   onName,
   folder,
   onPickFolder,
+  bookmarks,
+  onBookmarks,
+  pageNumbers,
+  onPageNumbers,
   merging,
   progress,
   disabled,
-  count,
-  onMerge,
+  label,
+  onRun,
 }: Props) {
   return (
-    <footer className="relative border-t border-zinc-200 bg-white/85 px-5 py-3.5 backdrop-blur dark:border-white/10 dark:bg-zinc-900/85">
+    <footer className="relative border-t border-zinc-200 bg-white/85 px-5 pb-3.5 pt-2.5 backdrop-blur dark:border-white/10 dark:bg-zinc-900/85">
       {merging && (
         <div
           className="absolute inset-x-0 top-0 h-0.5 bg-violet-500 transition-[width] duration-200"
           style={{ width: `${Math.round(progress * 100)}%` }}
         />
       )}
+
+      <div className="mb-2.5 flex flex-wrap items-center gap-4">
+        <Toggle checked={bookmarks} onChange={onBookmarks} label="Índice de marcadores" />
+        <Toggle checked={pageNumbers} onChange={onPageNumbers} label="Numerar páginas" />
+      </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -55,10 +68,43 @@ export function OutputBar({
           </button>
         </div>
 
-        <Button variant="primary" big disabled={disabled} onClick={onMerge} className="min-w-44">
-          {merging ? "Uniendo…" : `Unir ${count} PDF${count === 1 ? "" : "s"}`}
+        <Button variant="primary" big disabled={disabled} onClick={onRun} className="min-w-52">
+          {merging ? "Armando…" : label}
         </Button>
       </div>
     </footer>
+  );
+}
+
+function Toggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  label: string;
+}) {
+  return (
+    <label className="flex cursor-pointer select-none items-center gap-2 text-[12px] text-zinc-600 dark:text-zinc-400">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="peer sr-only"
+      />
+      <span
+        className={[
+          "grid h-4 w-4 place-items-center rounded-[5px] border transition",
+          "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-violet-500",
+          checked
+            ? "border-violet-600 bg-violet-600 text-white"
+            : "border-zinc-300 dark:border-white/20",
+        ].join(" ")}
+      >
+        {checked && <Check className="h-3 w-3" />}
+      </span>
+      {label}
+    </label>
   );
 }

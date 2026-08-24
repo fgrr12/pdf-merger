@@ -31,7 +31,7 @@ export function EmptyState({ onAddFiles, onAddFolder, dragging }: Props) {
       <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
         <Button variant="primary" big onClick={onAddFiles}>
           <Plus />
-          Agregar PDFs
+          Agregar archivos
         </Button>
         <Button big onClick={onAddFolder}>
           <FolderPlus />

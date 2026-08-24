@@ -11,7 +11,7 @@
     "t:d": "tauri dev",
     "t:b": "tauri build",
     "icons": "node generate-icons.mjs",
-    "check": "node scripts/check-merge.mjs"
+    "check": "node scripts/check-build.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

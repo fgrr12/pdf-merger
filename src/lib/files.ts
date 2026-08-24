@@ -18,7 +18,13 @@ export function joinPath(dir: string, name: string): string {
   return dir.endsWith(sep) ? dir + name : dir + sep + name;
 }
 
+const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png"];
+
 export const isPdf = (path: string) => path.toLowerCase().endsWith(".pdf");
+export const isImage = (path: string) =>
+  IMAGE_EXTENSIONS.some((ext) => path.toLowerCase().endsWith(ext));
+/** Lo que la app sabe meter en un PDF: otros PDFs y fotos. */
+export const isSupported = (path: string) => isPdf(path) || isImage(path);
 
 export function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -26,28 +32,28 @@ export function formatSize(bytes: number): string {
   return mb < 1 ? `${Math.round(bytes / 1024)} KB` : `${mb.toFixed(1)} MB`;
 }
 
-/** Los PDFs sueltos de una carpeta, en orden alfabético. No entra a subcarpetas. */
-export async function pdfsInFolder(dir: string): Promise<string[]> {
+/** Los archivos sueltos de una carpeta, en orden alfabético. No entra a subcarpetas. */
+export async function supportedInFolder(dir: string): Promise<string[]> {
   const entries = await readDir(dir);
   return entries
-    .filter((e) => e.isFile && isPdf(e.name))
+    .filter((e) => e.isFile && isSupported(e.name))
     .map((e) => joinPath(dir, e.name))
     .sort((a, b) => a.localeCompare(b, "es", { numeric: true }));
 }
 
 /**
  * Expande lo que el usuario haya soltado o elegido: los archivos pasan tal cual,
- * las carpetas se abren. Cualquier cosa que no sea PDF se ignora en silencio.
+ * las carpetas se abren. Lo que no sea PDF ni imagen se ignora en silencio.
  */
 export async function expandPaths(paths: string[]): Promise<string[]> {
   const out: string[] = [];
   for (const path of paths) {
-    if (isPdf(path)) {
+    if (isSupported(path)) {
       out.push(path);
       continue;
     }
     try {
-      out.push(...(await pdfsInFolder(path)));
+      out.push(...(await supportedInFolder(path)));
     } catch {
       // No era una carpeta legible (o no era carpeta): no hay nada que agregar.
     }
@@ -59,8 +65,12 @@ export async function pickFiles(): Promise<string[]> {
   const picked = await open({
     multiple: true,
     directory: false,
-    title: "Elegí tus PDFs",
-    filters: [{ name: "PDF", extensions: ["pdf"] }],
+    title: "Elegí PDFs o imágenes",
+    filters: [
+      { name: "PDF e imágenes", extensions: ["pdf", "jpg", "jpeg", "png"] },
+      { name: "PDF", extensions: ["pdf"] },
+      { name: "Imágenes", extensions: ["jpg", "jpeg", "png"] },
+    ],
   });
   return picked ?? [];
 }

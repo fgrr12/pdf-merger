@@ -98,6 +98,37 @@ export const Pages = (p: IconProps) => (
   </Icon>
 );
 
+
+export const Rotate = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M20 11a8 8 0 1 0-2.3 5.7" />
+    <path d="M20 5v6h-6" />
+  </Icon>
+);
+
+export const Undo = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 9h11a5 5 0 0 1 0 10h-5" />
+    <path d="M8 5 4 9l4 4" />
+  </Icon>
+);
+
+export const Files = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="4" y="4" width="11" height="14" rx="2" />
+    <path d="M8 20h8a3 3 0 0 0 3-3V8" />
+  </Icon>
+);
+
+export const Grid = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="4" y="4" width="7" height="7" rx="1.5" />
+    <rect x="13" y="4" width="7" height="7" rx="1.5" />
+    <rect x="4" y="13" width="7" height="7" rx="1.5" />
+    <rect x="13" y="13" width="7" height="7" rx="1.5" />
+  </Icon>
+);
+
 /** Marca de la app. El dibujo vive en `lib/logo.ts`, compartido con el generador de iconos. */
 export const Logo = ({ className = "h-8 w-8" }: { className?: string }) => (
   <svg
