@@ -1,34 +1,35 @@
 import type { Page, Source } from "../types";
 import { CardButton } from "./CardButton";
-import { Check, Rotate, X } from "./Icons";
+import { Check, ChevronLeft, ChevronRight, Rotate, X } from "./Icons";
 import { Thumb } from "./Thumb";
 
 type Props = {
   page: Page;
   source: Source;
   position: number;
+  total: number;
   selected: boolean;
   isDragging: boolean;
   isOver: boolean;
-  onSelect: (extend: boolean) => void;
   onRotate: () => void;
   onRemove: () => void;
+  onMove: (to: number) => void;
 };
 
 export function PageCard({
   page,
   source,
   position,
+  total,
   selected,
   isDragging,
   isOver,
-  onSelect,
   onRotate,
   onRemove,
+  onMove,
 }: Props) {
   return (
     <div
-      onClick={(e) => onSelect(e.shiftKey)}
       className={[
         "group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border bg-white transition",
         "dark:bg-zinc-900",
@@ -53,26 +54,33 @@ export function PageCard({
           {selected ? <Check className="h-3.5 w-3.5" /> : position}
         </span>
 
-        <div className="absolute inset-x-0 bottom-0 flex items-center justify-end gap-1 bg-linear-to-t from-black/60 to-transparent p-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-          <CardButton
-            label="Girar 90°"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRotate();
-            }}
-          >
+        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-linear-to-t from-black/60 to-transparent p-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+          {/* Arrastrar es lo natural, pero sin estas flechas reordenar sería
+              imposible sin mouse. */}
+          <div className="flex gap-1">
+            <CardButton
+              label="Mover antes"
+              disabled={position === 1}
+              onClick={() => onMove(position - 2)}
+            >
+              <ChevronLeft />
+            </CardButton>
+            <CardButton
+              label="Mover después"
+              disabled={position === total}
+              onClick={() => onMove(position)}
+            >
+              <ChevronRight />
+            </CardButton>
+          </div>
+          <div className="flex gap-1">
+          <CardButton label="Girar 90°" onClick={onRotate}>
             <Rotate />
           </CardButton>
-          <CardButton
-            label="Quitar página"
-            danger
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
-          >
+          <CardButton label="Quitar página" danger onClick={onRemove}>
             <X />
           </CardButton>
+          </div>
         </div>
       </div>
 

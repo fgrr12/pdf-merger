@@ -99,19 +99,30 @@ lugares que lo necesitan: el header (`Icons.tsx`, vía `dangerouslySetInnerHTML`
 fueron pareciendo cada vez menos: si retocás el dibujo, tocá ese archivo y corré
 `pnpm icons`. El grosor de la grapa está calibrado para que sobreviva a 32 px.
 
-### Dos drag & drop distintos
+### Reordenar NO usa HTML5 drag & drop (y no se puede volver atrás)
 
-- **Archivos desde el sistema**: los entrega el runtime de Tauri vía
-  `getCurrentWebview().onDragDropEvent` en `App.tsx`. El DOM nunca ve esos eventos, así
-  que no busques `onDrop` para esto.
-- **Reordenar tarjetas**: HTML5 drag & drop normal, dentro de `FileView` y `PageView`.
-  En la vista de archivos se mueve el bloque entero; en la de páginas, la página sola (o
-  toda la selección, si la que arrastrás es parte de ella).
+`useReorder` mueve tarjetas con **eventos de puntero** (`pointerdown`/`move`/`up` +
+`setPointerCapture`), no con la API de drag del navegador. Es obligatorio, no una
+preferencia:
 
-El orden de la grilla **es** el orden de salida. Las flechas ◀ ▶ de las tarjetas de
-archivo hacen lo mismo que arrastrar: existen porque el drag del webview puede fallar
-según la plataforma y porque son accesibles con teclado. Si tocás una de las dos vías,
-mantené la otra en pie.
+Con `dragDropEnabled: true` en `tauri.conf.json` —lo que hace que se puedan **soltar
+archivos sobre la ventana**— el manejador nativo de Tauri se traga los eventos de drag
+del webview y arrastrar tarjetas no hace absolutamente nada. Su documentación solo avisa
+de esto en Windows; en macOS pasa igual. Está comprobado: apagando la bandera el
+arrastre HTML5 funciona y el soltar archivos deja de funcionar. Con punteros andan las
+dos cosas.
+
+O sea: si alguna vez ves `draggable` + `onDragStart` en una tarjeta, es una regresión.
+
+El drop de archivos del sistema, en cambio, sí llega por Tauri:
+`getCurrentWebview().onDragDropEvent` en `App.tsx`. El DOM nunca ve esos eventos, no
+busques `onDrop`.
+
+El orden de la grilla **es** el orden de salida. En la vista de archivos se mueve el
+bloque entero; en la de páginas, la página sola (o toda la selección, si la que
+arrastrás es parte de ella). Las flechas ◀ ▶ de las tarjetas hacen lo mismo y existen
+porque arrastrar no es accesible con teclado: si tocás una de las dos vías, mantené la
+otra en pie.
 
 ### Permisos y scope de `fs` (donde se pierde más tiempo)
 

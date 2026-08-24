@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useCallback } from "react";
 
 import type { Page, Source } from "../types";
+import { useReorder } from "../hooks/useReorder";
 import { PageCard } from "./PageCard";
 
 type Props = {
@@ -22,13 +23,15 @@ export function PageView({
   onRotate,
   onMove,
 }: Props) {
-  const [dragId, setDragId] = useState<string | null>(null);
-  const [overId, setOverId] = useState<string | null>(null);
+  const commit = useCallback(
+    (key: string, to: number) => {
+      // Si lo que se arrastra es parte de la selección, se mueve toda junta.
+      onMove(selected.has(key) ? [...selected] : [key], to);
+    },
+    [onMove, selected],
+  );
 
-  const endDrag = () => {
-    setDragId(null);
-    setOverId(null);
-  };
+  const { dragKey, overIndex, handlers } = useReorder({ onCommit: commit, onTap: onSelect });
 
   return (
     <ul className="grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-3.5">
@@ -36,40 +39,18 @@ export function PageView({
         const source = sources[page.sourceId];
         if (!source) return null;
         return (
-          <li
-            key={page.id}
-            draggable
-            onDragStart={(e) => {
-              e.dataTransfer.effectAllowed = "move";
-              setDragId(page.id);
-            }}
-            onDragEnd={endDrag}
-            onDragOver={(e) => {
-              if (!dragId) return;
-              e.preventDefault();
-              e.dataTransfer.dropEffect = "move";
-              if (overId !== page.id) setOverId(page.id);
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              // Si lo que se arrastra es parte de la selección, se mueve toda junta.
-              if (dragId) {
-                const moving = selected.has(dragId) ? [...selected] : [dragId];
-                onMove(moving, index);
-              }
-              endDrag();
-            }}
-          >
+          <li key={page.id} {...handlers(page.id, index)}>
             <PageCard
               page={page}
               source={source}
               position={index + 1}
+              total={pages.length}
               selected={selected.has(page.id)}
-              isDragging={dragId === page.id}
-              isOver={overId === page.id && dragId !== null && dragId !== page.id}
-              onSelect={(extend) => onSelect(index, extend)}
+              isDragging={dragKey === page.id}
+              isOver={overIndex === index && dragKey !== null && dragKey !== page.id}
               onRotate={() => onRotate(selected.has(page.id) ? [...selected] : [page.id])}
               onRemove={() => onRemove(selected.has(page.id) ? [...selected] : [page.id])}
+              onMove={(to) => onMove([page.id], to)}
             />
           </li>
         );

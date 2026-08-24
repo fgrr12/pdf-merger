@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useCallback } from "react";
 
 import type { Block, Source } from "../types";
+import { useReorder } from "../hooks/useReorder";
 import { BlockCard } from "./BlockCard";
 import { Plus } from "./Icons";
 
@@ -15,44 +16,29 @@ type Props = {
 };
 
 export function FileView({ blocks, pending, onRemove, onRotate, onMove, onAddFiles }: Props) {
-  const [dragKey, setDragKey] = useState<string | null>(null);
-  const [overKey, setOverKey] = useState<string | null>(null);
+  // El arrastre trabaja con posiciones de bloque; `onMove` espera un índice de
+  // página, así que se traduce con el `start` del bloque de destino.
+  const commit = useCallback(
+    (key: string, to: number) => {
+      const dragged = blocks.find((b) => b.key === key);
+      const target = blocks[to];
+      if (dragged && target) onMove(ids(dragged), target.start);
+    },
+    [blocks, onMove],
+  );
 
-  const endDrag = () => {
-    setDragKey(null);
-    setOverKey(null);
-  };
+  const { dragKey, overIndex, handlers } = useReorder({ onCommit: commit });
 
   return (
     <ul className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-4">
       {blocks.map((block, index) => (
-        <li
-          key={block.key}
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.effectAllowed = "move";
-            setDragKey(block.key);
-          }}
-          onDragEnd={endDrag}
-          onDragOver={(e) => {
-            if (!dragKey) return;
-            e.preventDefault();
-            e.dataTransfer.dropEffect = "move";
-            if (overKey !== block.key) setOverKey(block.key);
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            const dragged = blocks.find((b) => b.key === dragKey);
-            if (dragged) onMove(ids(dragged), block.start);
-            endDrag();
-          }}
-        >
+        <li key={block.key} {...handlers(block.key, index)}>
           <BlockCard
             block={block}
             position={index + 1}
             total={blocks.length}
             isDragging={dragKey === block.key}
-            isOver={overKey === block.key && dragKey !== null && dragKey !== block.key}
+            isOver={overIndex === index && dragKey !== null && dragKey !== block.key}
             onRemove={() => onRemove(ids(block))}
             onRotate={() => onRotate(ids(block))}
             onMove={(target) => onMove(ids(block), blocks[target].start)}
