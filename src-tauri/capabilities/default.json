@@ -1,0 +1,36 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Elegir archivos y carpetas, leer los PDFs que el usuario suelta o elige, escribir el PDF unido y abrir la carpeta donde quedo.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:window:allow-set-title",
+    "dialog:default",
+    "opener:allow-reveal-item-in-dir",
+    "fs:allow-read-file",
+    "fs:allow-write-file",
+    "fs:allow-read-dir",
+    "fs:allow-exists",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        {
+          "path": "$HOME/**"
+        },
+        {
+          "path": "/Volumes/**"
+        },
+        {
+          "path": "/media/**"
+        },
+        {
+          "path": "/mnt/**"
+        }
+      ]
+    }
+  ]
+}

@@ -179,3 +179,12 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+# --- Node / Vite ---
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# --- Tauri ---
+src-tauri/target/
+src-tauri/gen/
