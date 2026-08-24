@@ -1,5 +1,7 @@
 import type { ReactNode, SVGProps } from "react";
 
+import { LOGO_INNER } from "../lib/logo";
+
 type IconProps = SVGProps<SVGSVGElement>;
 
 function Icon({ children, className = "h-4 w-4", ...rest }: IconProps & { children: ReactNode }) {
@@ -96,24 +98,12 @@ export const Pages = (p: IconProps) => (
   </Icon>
 );
 
-/** Marca de la app: dos hojas unidas por una grapa. */
+/** Marca de la app. El dibujo vive en `lib/logo.ts`, compartido con el generador de iconos. */
 export const Logo = ({ className = "h-8 w-8" }: { className?: string }) => (
-  <svg viewBox="0 0 32 32" className={className} aria-hidden="true">
-    <rect width="32" height="32" rx="9" fill="url(#grapa-bg)" />
-    <rect x="8.5" y="8" width="10" height="14" rx="1.6" fill="white" opacity=".55" />
-    <rect x="12.5" y="10.5" width="10" height="14" rx="1.6" fill="white" opacity=".92" />
-    <path
-      d="M11.5 12.5v-1.8a2.2 2.2 0 0 1 4.4 0v6.6"
-      stroke="#4c1d95"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      fill="none"
-    />
-    <defs>
-      <linearGradient id="grapa-bg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#8b5cf6" />
-        <stop offset="1" stopColor="#6d28d9" />
-      </linearGradient>
-    </defs>
-  </svg>
+  <svg
+    viewBox="0 0 512 512"
+    className={className}
+    aria-hidden="true"
+    dangerouslySetInnerHTML={{ __html: LOGO_INNER }}
+  />
 );

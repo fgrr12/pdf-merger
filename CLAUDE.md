@@ -14,7 +14,7 @@ pnpm t:d              # tauri dev (levanta Vite en el puerto fijo 1420)
 pnpm t:b              # tauri build → src-tauri/target/release/bundle/
 pnpm build            # typecheck (tsc) + vite build, solo frontend
 pnpm check            # chequeo del merge (node corre el .ts directo, sin framework)
-pnpm icons            # regenera src-tauri/icons/ desde el SVG embebido en generate-icons.mjs
+pnpm icons            # regenera src-tauri/icons/ desde src/lib/logo.ts
 ```
 
 No hay linter. Las dos verificaciones automáticas son `pnpm build` (tsc estricto, con
@@ -52,6 +52,14 @@ inutilizable, por eso `inspect()` siempre le pasa una copia (`new Uint8Array(byt
 `inspect()` corre de a un archivo por vez (`useDocuments.add`): cada uno levanta un
 worker de pdf.js. La UI no espera — las tarjetas aparecen en estado `loading` y se van
 completando.
+
+### La marca vive en un solo lugar
+
+`src/lib/logo.ts` exporta el SVG de la marca como string, y lo consumen los dos únicos
+lugares que lo necesitan: el header (`Icons.tsx`, vía `dangerouslySetInnerHTML`) y
+`generate-icons.mjs`, que corre en node y no puede importar JSX. Estaban duplicados y se
+fueron pareciendo cada vez menos: si retocás el dibujo, tocá ese archivo y corré
+`pnpm icons`. El grosor de la grapa está calibrado para que sobreviva a 32 px.
 
 ### Dos drag & drop distintos
 

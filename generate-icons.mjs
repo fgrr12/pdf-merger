@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { LOGO_SVG } from "./src/lib/logo.ts";
 import { writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -6,40 +7,8 @@ import { fileURLToPath } from "url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const iconsDir = join(__dirname, "src-tauri", "icons");
 
-// El icono de Grapa: dos hojas unidas por una grapa.
-const svg = `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#8b5cf6"/>
-      <stop offset="100%" stop-color="#5b21b6"/>
-    </linearGradient>
-    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2e1065" flood-opacity="0.45"/>
-    </filter>
-  </defs>
-
-  <rect width="512" height="512" rx="112" ry="112" fill="url(#bg)"/>
-
-  <g filter="url(#soft)">
-    <!-- Hoja de atras -->
-    <rect x="128" y="118" width="176" height="240" rx="20" fill="#ffffff" opacity="0.55"/>
-    <!-- Hoja de adelante -->
-    <rect x="200" y="160" width="176" height="240" rx="20" fill="#ffffff"/>
-  </g>
-
-  <!-- Renglones de la hoja de adelante -->
-  <g fill="#c4b5fd">
-    <rect x="232" y="262" width="112" height="14" rx="7"/>
-    <rect x="232" y="298" width="88" height="14" rx="7"/>
-    <rect x="232" y="334" width="104" height="14" rx="7"/>
-  </g>
-
-  <!-- La grapa que une las dos hojas -->
-  <path d="M186 214v-38a46 46 0 0 1 92 0v104"
-        fill="none" stroke="#4c1d95" stroke-width="30" stroke-linecap="round"/>
-</svg>
-`;
+// El dibujo vive en src/lib/logo.ts, compartido con el header de la app.
+const svg = LOGO_SVG;
 
 async function generate() {
   const sizes = [
